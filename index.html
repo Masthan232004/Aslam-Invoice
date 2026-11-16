@@ -101,22 +101,36 @@
       update();
     }
     function update(){
-      const distance=Math.max(0,num('final')-num('initial')), hire=rentMode==='day'?num('hire'):0, kmCharge=rentMode==='km'?distance*num('rate'):0, allowance=num('allowance'), parking=num('parking'), toll=num('toll');
+      const hasMeterReadings=val('initial')!==''&&val('final')!=='';
+      const distance=hasMeterReadings?Math.max(0,num('final')-num('initial')):0, hire=rentMode==='day'?num('hire'):0, kmCharge=rentMode==='km'?distance*num('rate'):0, allowance=num('allowance'), parking=num('parking'), toll=num('toll');
       const liters=num('mileage')>0?Math.round(distance/num('mileage')):0, diesel=rentMode==='day'?liters*num('dieselRate'):0, total=hire+kmCharge+diesel+allowance+parking+toll, rounded=Math.round(total);
       const put=(id,text,empty=false)=>{el(id).textContent=text||'—';el(id).classList.toggle('empty',empty&&!text)};
       put('outBillDate',dateText(val('billDate')),true);put('outBillTo',val('billTo'),true);
       const journeyFrom=dateText(val('journeyDate')), journeyTo=dateText(val('journeyTo'));
       const journey=[journeyFrom,journeyTo].filter(Boolean).join(' to ')+(val('period')?' ('+val('period')+')':'');
-      const lines=[
-        `<div class="read-row"><span>Destination: ${val('destination')||'—'}</span></div>`,
-        `<div class="read-row"><span>Vehicle No: ${val('vehicleNo')||'—'}</span></div>`,
-        `<div class="read-row"><span>Type of Vehicle: ${val('vehicleType')||'—'}</span></div>`,
-        `<div class="read-row journey-row"><span>Period of Journey: ${journey || '—'}</span></div>`,
-        `<div class="read-row"><span>Final Reading: ${val('final')||'—'} km</span><span class="time">Time: ${val('finalTime')||'—'}</span></div>`,
-        `<div class="read-row"><span>Initial Reading: ${val('initial')||'—'} km</span><span class="time">Time: ${val('initialTime')||'—'}</span></div>`,
-        `<div class="read-row"><span>Total Reading: ${distance.toLocaleString('en-IN')} km</span></div>`
-      ];
-      el('outParticulars').innerHTML=lines.join('');
+      const readRow=(text,time='',journeyRow=false)=>{
+        const row=document.createElement('div');
+        row.className='read-row'+(journeyRow?' journey-row':'');
+        const label=document.createElement('span');
+        label.textContent=text;
+        row.append(label);
+        if(time){
+          const timeLabel=document.createElement('span');
+          timeLabel.className='time';
+          timeLabel.textContent=time;
+          row.append(timeLabel);
+        }
+        return row;
+      };
+      el('outParticulars').replaceChildren(
+        readRow('Destination: '+(val('destination')||'—')),
+        readRow('Vehicle No: '+(val('vehicleNo')||'—')),
+        readRow('Type of Vehicle: '+(val('vehicleType')||'—')),
+        readRow('Period of Journey: '+(journey||'—'),'',true),
+        readRow('Final Reading: '+(val('final')||'—')+' km','Time: '+(val('finalTime')||'—')),
+        readRow('Initial Reading: '+(val('initial')||'—')+' km','Time: '+(val('initialTime')||'—')),
+        readRow('Total Reading: '+(hasMeterReadings?distance.toLocaleString('en-IN'):'—')+' km')
+      );
       el('outHire').textContent=money(hire);
       el('outKmLabel').textContent=`Rent Per Kilometer: ${distance.toLocaleString('en-IN')} km × ${money(num('rate'))}`;
       el('outKmAmount').textContent=money(kmCharge);
@@ -128,7 +142,7 @@
     el('perDayBtn').addEventListener('click',()=>setRentMode('day'));
     el('perKmBtn').addEventListener('click',()=>setRentMode('km'));
     el('saveBtn').addEventListener('click',()=>window.print());
-    el('clearBtn').addEventListener('click',()=>{if(confirm('Clear all bill details?')){ids.forEach(id=>el(id).value='');update()}});
+    el('clearBtn').addEventListener('click',()=>{if(confirm('Clear all bill details?')){ids.forEach(id=>el(id).value='');el('fuelType').value='Diesel';setRentMode('day')}});
     update();
   </script>
 </body>
